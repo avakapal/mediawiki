@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: {{ template "mediawiki.name" .}}
+ namespace: "{{ .Values.namespace}}"
+ labels:
+   app: {{ template "mediawiki.name" .}}
+spec:
+ replicas: 1
+ selector:
+   matchLabels:
+     app: {{ template "mediawiki.name" .}}
+ template:
+   metadata:
+     labels:
+       app: {{ template "mediawiki.name" .}}
+     containers:
+     - name: {{ template "persistence-query-service.name" .}}
+       image: "{{ .Values.image.repository}}:{{ .Values.image.tag}}"
+       imagePullPolicy: "{{ .Values.image.pullPolicy}}"
+       volumeMounts:
+            - name: mediawiki
+              mountPath: /var/www/html/images
+  
+       ports:
+       - containerPort: 80
+       resources:
+          requests:
+            memory: "{{ template "resources.requests.memory" .}}"
+            cpu: "{{ template "resources.requests.cpu" .}}"
+          limits:
+            memory: "{{ template "resources.limits.memory" .}}"
+            cpu: "{{ template "resources.limits.cpu" .}}"
+       env:
+       - name: db_name
+         value : "{{ .Values.wikidbvalues.dbname }}" 
+       - name: db_IP
+         value : "{{ template "db.node" . }}"
+       - name: db_PORT
+         value : "123"
+       - name: db_USERNAME
+         valueFrom:
+            secretKeyRef:
+                name: "{{ .Values.wikidbvalues.username }}"
+                key: username
+       - name: db_PASSWORD
+         valueFrom:
+            secretKeyRef:
+                name: "{{ .Values.queryservicecrdval.username }}"
+                key: password
