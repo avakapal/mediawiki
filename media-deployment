@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mediawiki
+  labels:
+    app: mediawiki
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      nodePort: 8080
+  selector:
+    app: mediawiki
+ ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mw-pv-claim
+  labels:
+    app: mediawiki
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: mediawiki
+  labels:
+    app: mediawiki
+spec:
+  selector:
+    matchLabels:
+      app: mediawiki
+   strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mediawiki
+        tier: frontend
+    spec:
+      containers:
+      - image: mediawiki:stable
+        name: mediawiki
+        env:
+        - name: mediawiki_DB_HOST
+          value: mediawiki-mysql
+        - name: mediawiki_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-pass
+              key: password
+        ports:
+        - containerPort: 80
+          name: mediawiki
+        volumeMounts:
+        - name: mediawiki-persistent-storage
+          mountPath: /var/www/html/images
+      volumes:
+      - name: mediawiki-persistent-storage
+        persistentVolumeClaim:
+          claimName: wp-pv-claim
